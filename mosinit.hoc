@@ -1,0 +1,30 @@
+load_file("nrngui.hoc")
+
+{
+xpanel("2VN Neurons")
+xbutton("Phasic model T8 step","stim_type = 1 amp = 1 cell_type = 1 cell_nr = 8 restart() load_file(1, \"control.hoc\")") 
+xbutton("Phasic model T8 ZAP","stim_type = 2 amp = 1 cell_type = 1 cell_nr = 8 restart() load_file(1, \"control.hoc\")")
+xbutton("Tonic model T1 step","stim_type = 1 amp = 0.6 cell_type = 2 cell_nr = 1 restart() load_file(1, \"control.hoc\")")
+xbutton("Tonic model T1 ZAP","stim_type = 2 amp = 0.5 cell_type = 2 cell_nr = 1 restart() load_file(1, \"control.hoc\")")
+xbutton("Synaptic train stimulation, with inhibition","ton_inhib = 1 cell_nr = 7 restart() xopen(\"traincontrol.hoc\")")
+xbutton("Synaptic train stimulation, no inhibition","ton_inhib = 0 cell_nr = 7 restart() xopen(\"traincontrol.hoc\")")
+xbutton("quit","quit()")
+xpanel(20,126)
+}
+
+proc restart() {
+	objref graphItem
+	for i=0, n_graph_lists-1 {
+		graphList[i].remove_all()
+	}
+	flush_list.remove_all()
+	fast_flush_list.remove_all()
+	doNotify()
+	for (i=PWManager[0].count-1; i > 1; i -= 1) {
+		PWManager[0].close(i)
+		doNotify()
+	}
+}
+
+
+

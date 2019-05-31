@@ -1,0 +1,106 @@
+begintemplate cell
+public soma, dend
+
+create soma, dend[1]
+
+objref skca // ONLY IN SOMA POSSIBLE, CHANGE SOMETHING TO ALSO ADD IT TO DEND
+
+proc init() {
+
+    N = $1
+    rho = $2
+    Le = $3
+    CS = $4     // pF
+    GS = $5     // nS
+    GSh = $6    // nS        
+    GNa = $7    // S/cm2
+    GK = $8     // S/cm2
+    GKd = $9    // S/cm2
+    tfac = $10
+    GKCa = $11  // mS/cm2
+    El = $13    // mV $12
+    Els = $13   // mV
+    bn = $14 
+    gn = $15
+    tn = $16
+    tca = $17
+
+    create soma, dend[N]
+
+    Gcore = (rho*N*GS*1e-9)/(Le*Le)                     // S
+    Rcore = 1/Gcore                                     // Ohm
+
+    soma {
+
+        nseg = 1
+        cm = 1                                      // uF/cm2
+        CM = CS * 1e-6                              // uF
+        Area = CM / cm                              // (uF/(uF/cm2)) = cm2     
+        l = sqrt(Area/PI)                           // cm
+        diam = l * 1e4                              // um
+        L = l * 1e4                                 // um
+    
+        insert fh 
+        gnabar_fh = GNa                             // S/cm2
+        gkbar_fh = 0
+        gl_fh = (GS+GSh) * 1e-9 / Area              // nS
+        el_fh = Els                                  // mV
+        vsh_fh = -70
+
+        Rm = 1/gl_fh                                // Ohm cm2
+
+        Ra = (Rcore/L)*PI*(diam/2)*(diam/2)*1e-4    // Ohm cm
+
+        insert kml 
+        gbar_kml =  GK     // S/cm2
+        bn_kml = bn 
+        gn_kml = gn
+        tn_kml = tn
+
+        if(GKd!=0) {
+            insert klt
+            gbar_klt = GKd    // S/cm2
+            tfac_klt = tfac
+        }
+
+        ek = -90
+        ena = 55
+
+        if(GKCa!=0) {
+            skca = new KCa(0.5)
+            skca.dgkbar = GKCa // mS/cm2
+            skca.egk   = -90
+            skca.ctau =  tca
+            skca.thresh = -10
+        }
+
+    }
+
+    for i=0, N-1 dend[i] {
+
+        nseg = 1
+        cm = 1                                      // uF/cm2
+        CM = (rho/N) * CS * 1e-6                    // uF
+        Area = CM / cm                              // (uF/(uF/cm2)) = cm2     
+        l = sqrt(Area/PI)                           // cm
+        diam = l * 1e4                              // um
+        L = l * 1e4                                 // um
+
+        insert leak
+        g_leak = (rho/N) * GS * 1e-9 / Area         // nS
+        Er_leak = El                               // (mV)
+        Rm = 1/g_leak                               // Ohm cm2
+
+        Ra = (Rcore/L)*PI*(diam/2)*(diam/2)*1e-4    // Ohm cm
+        
+    }
+
+    connect dend[0](0), soma(1)
+    if(N>1) {
+        for k=0, N-2 {
+            connect dend[k+1](0), dend[k](1)
+        }
+    }
+}
+
+endtemplate cell

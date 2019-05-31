@@ -1,0 +1,118 @@
+celsius=14
+
+load_file("nparams.hoc")
+load_file("custominit.hoc")
+load_file("cell_d.hoc")
+
+mono_syn_delay = 2.6  //ms 3.5
+syn_latency = 1.8 //ms
+ni = vt_CS.size()   // GET NUMBER OF TONIC CELLS
+cell_nr = cell_nr-1
+
+objref p_synE, t_synE[ni]
+
+objectvar phasiccell
+
+    rho=vp_rho.x(cell_nr)
+    Le=vp_Le.x(cell_nr)
+    CS=vp_CS.x(cell_nr) 
+    GS=vp_GS.x(cell_nr)
+    GSh=vp_GSh.x(cell_nr)
+    GNa=p_GNa
+    GK=p_GK
+    GKCa=p_GKCa
+    tn=p_tn
+    tca=p_tca
+    N=p_N 
+    GKd=vp_GKd.x(cell_nr)
+    tfac=p_tfac
+    El=p_El
+    Els=p_Els
+    bn=p_bn
+    gn=p_gn
+
+phasiccell = new cell(N, rho, Le, CS, GS, GSh, GNa, GK, GKd, tfac, GKCa, El, Els, bn, gn, tn, tca)
+
+phasiccell.soma p_synE = new Exp2Syn(0.5)
+p_synE.tau1 = p_tau1E
+p_synE.tau2 = p_tau2E
+p_synE.e = 0
+
+objectvar toniccell[ni]
+
+for i = 0, ni-1 {
+
+    t_rho=vt_rho.x(i)
+    t_Le=vt_Le.x(i)
+    t_CS=vt_CS.x(i) 
+    t_GS=vt_GS.x(i)
+    t_GSh=vt_GSh.x(i)
+    t_GNa=vt_GNa.x(i)
+    t_GK=vt_GK.x(i)
+    t_GKCa=vt_GKCa.x(i)
+    t_tn=vt_tn.x(i)
+    t_tca=vt_tca.x(i)
+
+    toniccell[i] = new cell(t_N, t_rho, t_Le, t_CS, t_GS, t_GSh, t_GNa, t_GK, t_GKd, t_tfac, t_GKCa, t_El, t_Els, t_bn, t_gn, t_tn, t_tca)
+
+    toniccell[i].soma t_synE[i] = new Exp2Syn(0.5)
+    t_synE[i].tau1 = t_tau1E
+    t_synE[i].tau2 = t_tau2E
+    t_synE[i].e = 0
+} 
+
+objref ncI[ni], synI[ni]
+
+if (ton_inhib == 1){
+for i = 0,ni-1 {
+    phasiccell.soma synI[i] = new Exp2Syn(0.5)
+    synI[i].tau1 = tau1In
+    synI[i].tau2 = tau2In
+    synI[i].e = EIn 
+    toniccell[i].soma ncI[i] = new NetCon(&v(0.5), synI[i], -30, syn_latency, GIn) //weight in uS
+}
+}
+
+objref synfile, syntimes, interspiket, p_ncE, t_ncE[ni], nil, fih
+
+synfile = new File()
+synfile.ropen("syntimes570.txt")
+tstop = 5000
+    
+syntimes = new Vector()
+syntimes.scanf(synfile)
+
+p_ncE = new NetCon(nil, p_synE, 0.5, 0, p_GE)
+
+for i = 0,ni-1 {
+    t_ncE[i] = new NetCon(nil, t_synE[i], 0.5, 0, t_GE)         
+}
+
+fih = new FInitializeHandler("loadqueue()")
+proc loadqueue() { local ii
+    for ii=0,syntimes.size()-1 p_ncE.event(syntimes.x[ii]+mono_syn_delay)
+    for i = 0,ni-1 {
+        for ii=0,syntimes.size()-1 t_ncE[i].event(syntimes.x[ii]+mono_syn_delay)
+    }
+}
+
+access phasiccell.soma
+
+objectvar window, window2
+
+window = new Graph(0)
+window.size(0,5000,-80,40)
+window.view(0, -80, 5000, 120, 325, 127, 699.84, 250.24)
+graphList[0].append(window)
+window.addexpr("phasiccell.soma.v(.5)", 1, 1, 0.8, 0.9, 2)
+
+window2 = new Graph(0)
+window2.size(0,5000,-80,40)
+window2.view(0, -80, 5000, 120, 324, 452, 699.84, 250.24)
+graphList[0].append(window2)
+window2.addexpr("toniccell[3].soma.v(.5)", 1, 1, 0.8, 0.9, 2)
+
+run()
+
+
+
